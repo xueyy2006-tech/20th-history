@@ -1148,6 +1148,24 @@ const APP = {
     return qs;
   },
 
+  backToQuizMenu() {
+    this.quizState = null;
+    document.getElementById('quizContainer').innerHTML = `
+      <div class="quiz-setup">
+        <h3>📝 选择测验类型</h3>
+        <div class="quiz-options">
+          <button class="quiz-option-btn" data-qtype="choice">📋 单选题（10题）</button>
+          <button class="quiz-option-btn" data-qtype="fill">✏️ 填空题（10题）</button>
+          <button class="quiz-option-btn" data-qtype="truefalse">✅ 判断题（10题）</button>
+          <button class="quiz-option-btn" data-qtype="mixed">🎯 混合模式（15题）</button>
+        </div>
+      </div>`;
+    // Re-bind the quiz option buttons
+    document.querySelectorAll('.quiz-option-btn').forEach(btn => {
+      btn.addEventListener('click', () => this.startQuiz(btn.dataset.qtype));
+    });
+  },
+
   generateMixedQuestions(events, count) {
     const qs = [];
     qs.push(...this.generateChoiceQuestions(events, 5));
@@ -1247,7 +1265,7 @@ const APP = {
         <div class="score-label">${grade} · 正确率 ${pct}%</div>
         <div style="margin-top:16px;">
           <button class="flashcard-action remembered" onclick="APP.startQuiz('${state.type}')">🔄 再来一轮</button>
-          <button class="flashcard-action forgot" onclick="APP.quizState=null;document.getElementById('quizContainer').innerHTML=document.querySelector('#panel-quiz .quiz-setup') ? '<div class=\\'quiz-setup\\'><h3>📝 选择测验类型</h3>...</div>' : '';location.reload();" style="margin-left:8px;">↩ 返回选择</button>
+          <button class="flashcard-action forgot" onclick="APP.backToQuizMenu()" style="margin-left:8px;">↩ 返回选择</button>
         </div>
         ${mistakes.length ? `<div class="quiz-mistakes"><h4>📋 错题回顾（${mistakes.length}题）</h4>${mistakes.map(m => `<div class="quiz-mistake-item" onclick="APP.openModal('${m.question.eventId}')">${m.question.question}<br><small style="color:var(--red)">你的答案不正确 · 点击查看详情</small></div>`).join('')}</div>` : '<p style="margin-top:12px;color:var(--green)">🎉 全部正确！太棒了！</p>'}
       </div>`;
