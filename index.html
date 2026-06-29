@@ -956,57 +956,111 @@ const APP = {
     this.renderQuizQuestion();
   },
 
-    generateChoiceQuestions(events, count) {
+      generateChoiceQuestions(events, count) {
     const qs = [];
     const pool = [...events].sort(() => Math.random() - 0.5);
     const sysNames = { versailles: '凡尔赛体系', washington: '华盛顿体系', yalta: '雅尔塔体系', sanfrancisco: '旧金山体制', other: '其他' };
     const regionLabels = { europe: '欧洲', americas: '美洲', soviet: '苏联/东欧', 'middle-east': '中东', 'asia-pacific': '亚太', global: '全球' };
+    const allSystems = ['versailles','washington','yalta','sanfrancisco','other'];
+    const allRegions = ['europe','americas','soviet','middle-east','asia-pacific','global'];
     const qTypes = ['system', 'date', 'region', 'significance'];
     for (let i = 0; i < Math.min(count, pool.length); i++) {
       const e = pool[i];
       const qType = qTypes[i % 4];
       let question, choices, correct, explanation;
       if (qType === 'system') {
-        const distractors = events.filter(x => x.id !== e.id && x.system !== e.system).sort(() => Math.random() - 0.5).slice(0, 3);
-        const ce = [e, ...distractors].sort(() => Math.random() - 0.5);
-        question = '“' + e.name_zh + '”属于以下哪个国际体系？';
+        const otherSystems = allSystems.filter(s => s !== e.system).sort(() => Math.random() - 0.5);
+        const distractors = [];
+        for (const sys of otherSystems) {
+          const candidates = events.filter(x => x.system === sys && x.id !== e.id);
+          if (candidates.length > 0) {
+            distractors.push(candidates[Math.floor(Math.random() * candidates.length)]);
+          }
+          if (distractors.length >= 3) break;
+        }
+        if (distractors.length < 3) {
+          const remaining = events.filter(x => x.id !== e.id && !distractors.includes(x) && x.system !== e.system);
+          const extra = remaining.sort(() => Math.random() - 0.5).slice(0, 3 - distractors.length);
+          distractors.push(...extra);
+        }
+        const ce = [e, ...distractors.slice(0,3)].sort(() => Math.random() - 0.5);
+        question = '\u201C' + e.name_zh + '\u201D属于以下哪个国际体系？';
         choices = ce.map(c => sysNames[c.system]);
         correct = ce.findIndex(c => c.id === e.id);
-        explanation = e.name_zh + ' — 属于' + sysNames[e.system] + '。' + e.summary;
+        explanation = e.name_zh + ' \u2014 \u5C5E\u4E8E' + sysNames[e.system] + '\u3002' + e.summary;
       } else if (qType === 'date') {
-        const year = e.date.slice(0,4);
-        const distractors = events.filter(x => x.id !== e.id && Math.abs(parseInt(x.date.slice(0,4)) - parseInt(year)) <= 5).sort(() => Math.random() - 0.5).slice(0, 3);
-        if (distractors.length < 3) {
-          const more = events.filter(x => x.id !== e.id && !distractors.includes(x)).sort(() => Math.random() - 0.5).slice(0, 3 - distractors.length);
-          distractors.push(...more);
+        const correctYear = parseInt(e.date.slice(0,4));
+        const distractors = [];
+        const decades = [1910, 1930, 1950, 1970, 1990].filter(d => Math.abs(d - correctYear) > 10);
+        const shuffledDecades = decades.sort(() => Math.random() - 0.5);
+        for (const dec of shuffledDecades) {
+          const candidates = events.filter(x => {
+            const y = parseInt(x.date.slice(0,4));
+            return x.id !== e.id && Math.abs(y - dec) <= 5 && !distractors.includes(x);
+          });
+          if (candidates.length > 0) {
+            distractors.push(candidates[Math.floor(Math.random() * candidates.length)]);
+          }
+          if (distractors.length >= 3) break;
         }
-        const ce = [e, ...distractors].sort(() => Math.random() - 0.5);
-        question = '以下哪个事件发生在' + year + '年？';
-        choices = ce.map(c => c.name_zh + '（' + c.date.slice(0,4) + '年）');
+        if (distractors.length < 3) {
+          const remaining = events.filter(x => x.id !== e.id && !distractors.includes(x) && Math.abs(parseInt(x.date.slice(0,4)) - correctYear) > 5);
+          const extra = remaining.sort(() => Math.random() - 0.5).slice(0, 3 - distractors.length);
+          distractors.push(...extra);
+        }
+        const ce = [e, ...distractors.slice(0,3)].sort(() => Math.random() - 0.5);
+        question = '\u4EE5\u4E0B\u54EA\u4E2A\u4E8B\u4EF6\u53D1\u751F\u5728' + correctYear + '\u5E74\uFF1F';
+        choices = ce.map(c => c.name_zh + '\uFF08' + c.date.slice(0,4) + '\u5E74\uFF09');
         correct = ce.findIndex(c => c.id === e.id);
-        explanation = e.name_zh + ' 发生在 ' + e.date + '。' + e.summary;
+        explanation = e.name_zh + ' \u53D1\u751F\u5728 ' + e.date + '\u3002' + e.summary;
       } else if (qType === 'region') {
-        const distractors = events.filter(x => x.id !== e.id && x.region !== e.region).sort(() => Math.random() - 0.5).slice(0, 3);
-        const ce = [e, ...distractors].sort(() => Math.random() - 0.5);
-        question = '“' + e.name_zh + '”涉及以下哪个地区？';
+        const otherRegions = allRegions.filter(r => r !== e.region).sort(() => Math.random() - 0.5);
+        const distractors = [];
+        for (const reg of otherRegions) {
+          const candidates = events.filter(x => x.region === reg && x.id !== e.id);
+          if (candidates.length > 0) {
+            distractors.push(candidates[Math.floor(Math.random() * candidates.length)]);
+          }
+          if (distractors.length >= 3) break;
+        }
+        if (distractors.length < 3) {
+          const remaining = events.filter(x => x.id !== e.id && !distractors.includes(x) && x.region !== e.region);
+          const extra = remaining.sort(() => Math.random() - 0.5).slice(0, 3 - distractors.length);
+          distractors.push(...extra);
+        }
+        const ce = [e, ...distractors.slice(0,3)].sort(() => Math.random() - 0.5);
+        question = '\u201C' + e.name_zh + '\u201D涉及以下哪个地区？';
         choices = ce.map(c => regionLabels[c.region]);
         correct = ce.findIndex(c => c.id === e.id);
-        explanation = e.name_zh + ' — 涉及' + regionLabels[e.region] + '。' + e.summary;
+        explanation = e.name_zh + ' \u2014 \u6D89\u53CA' + regionLabels[e.region] + '\u3002' + e.summary;
       } else {
         if (!e.significance) {
-          const distractors = events.filter(x => x.id !== e.id).sort(() => Math.random() - 0.5).slice(0, 3);
+          const distractors = events.filter(x => x.id !== e.id && x.system !== e.system).sort(() => Math.random() - 0.5).slice(0, 3);
           const ce = [e, ...distractors].sort(() => Math.random() - 0.5);
-          question = '“' + e.name_zh + '”（' + e.name_en + '）与以下哪项描述最为相关？';
-          choices = ce.map(c => c.summary.slice(0, 50) + '…');
+          question = '\u201C' + e.name_zh + '\u201D与以下哪项描述最为相关？';
+          choices = ce.map(c => c.summary.slice(0, 60) + '\u2026');
           correct = ce.findIndex(c => c.id === e.id);
-          explanation = e.name_zh + '：' + e.summary;
+          explanation = e.name_zh + '\uFF1A' + e.summary;
         } else {
-          const distractors = events.filter(x => x.id !== e.id && x.significance).sort(() => Math.random() - 0.5).slice(0, 3);
-          const ce = [e, ...distractors].sort(() => Math.random() - 0.5);
-          question = '以下哪段历史意义描述对应“' + e.name_zh + '”？';
-          choices = ce.map(c => c.significance.slice(0, 60) + '…');
+          const otherSystems = allSystems.filter(s => s !== e.system).sort(() => Math.random() - 0.5);
+          const distractors = [];
+          for (const sys of otherSystems) {
+            const candidates = events.filter(x => x.system === sys && x.id !== e.id && x.significance);
+            if (candidates.length > 0) {
+              distractors.push(candidates[Math.floor(Math.random() * candidates.length)]);
+            }
+            if (distractors.length >= 3) break;
+          }
+          if (distractors.length < 3) {
+            const remaining = events.filter(x => x.id !== e.id && !distractors.includes(x) && x.significance);
+            const extra = remaining.sort(() => Math.random() - 0.5).slice(0, 3 - distractors.length);
+            distractors.push(...extra);
+          }
+          const ce = [e, ...distractors.slice(0,3)].sort(() => Math.random() - 0.5);
+          question = '\u4EE5\u4E0B\u54EA\u6BB5\u5386\u53F2\u610F\u4E49\u63CF\u8FF0\u5BF9\u5E94\u201C' + e.name_zh + '\u201D\uFF1F';
+          choices = ce.map(c => c.significance.slice(0, 60) + '\u2026');
           correct = ce.findIndex(c => c.id === e.id);
-          explanation = e.name_zh + ' 的历史意义：' + e.significance;
+          explanation = e.name_zh + ' \u7684\u5386\u53F2\u610F\u4E49\uFF1A' + e.significance;
         }
       }
       qs.push({ type: 'choice', question, choices, correct, eventId: e.id, explanation });
@@ -1020,10 +1074,10 @@ const APP = {
     pool.forEach(e => {
       qs.push({
         type: 'fill',
-        question: `______年，______（事件英文名：${e.name_en}）发生。其历史意义是：${e.significance ? e.significance.slice(0, 30) + '...' : '请简述'}`,
-        answer: `${e.date.slice(0,4)}年 ${e.name_zh}`,
+        question: '______年，______发生。其历史意义是：' + (e.significance ? e.significance.slice(0, 40) + '...\uFF08\u8BF7\u586B\u5199\u4E8B\u4EF6\u540D\u79F0\uFF09' : '\u8BF7\u586B\u5199\u4E8B\u4EF6\u540D\u79F0'),
+        answer: e.date.slice(0,4) + '\u5E74 ' + e.name_zh,
         eventId: e.id,
-        explanation: `${e.date.slice(0,4)}年 — ${e.name_zh}（${e.name_en}）。${e.summary}`
+        explanation: e.date.slice(0,4) + '\u5E74 \u2014 ' + e.name_zh + '\uFF08' + e.name_en + '\uFF09\u3002' + e.summary
       });
     });
     return qs;
@@ -1033,16 +1087,42 @@ const APP = {
     const qs = [];
     const pool = [...events].sort(() => Math.random() - 0.5).slice(0, count);
     pool.forEach(e => {
-      const isTrue = Math.random() > 0.5;
-      const wrongDate = (parseInt(e.date.slice(0,4)) + (Math.random() > 0.5 ? 2 : -2)).toString();
+      const sysNames = { versailles: '\u51E1\u5C14\u8D5B\u4F53\u7CFB', washington: '\u534E\u76DB\u987F\u4F53\u7CFB', yalta: '\u96C5\u5C14\u5854\u4F53\u7CFB', sanfrancisco: '\u65E7\u91D1\u5C71\u4F53\u5236', other: '\u5176\u4ED6' };
+      const regions = { europe: '\u6B27\u6D32', americas: '\u7F8E\u6D32', soviet: '\u82CF\u8054/\u4E1C\u6B27', 'middle-east': '\u4E2D\u4E1C', 'asia-pacific': '\u4E9A\u592A', global: '\u5168\u7403' };
+      const variant = Math.floor(Math.random() * 3);
+      let question, isTrue;
+      if (variant === 0) {
+        const offset = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random() * 15) + 5);
+        const wrongYear = parseInt(e.date.slice(0,4)) + offset;
+        isTrue = Math.random() > 0.5;
+        question = isTrue
+          ? e.name_zh + '\u53D1\u751F\u5728' + e.date.slice(0,4) + '\u5E74\u3002'
+          : e.name_zh + '\u53D1\u751F\u5728' + wrongYear + '\u5E74\u3002';
+      } else if (variant === 1) {
+        const correctSys = sysNames[e.system];
+        const otherSysNames = ['\u51E1\u5C14\u8D5B\u4F53\u7CFB','\u534E\u76DB\u987F\u4F53\u7CFB','\u96C5\u5C14\u5854\u4F53\u7CFB','\u65E7\u91D1\u5C71\u4F53\u5236'];
+        const wrongOpts = otherSysNames.filter(s => s !== correctSys);
+        const wrongSys = wrongOpts[Math.floor(Math.random() * wrongOpts.length)] || '\u51E1\u5C14\u8D5B\u4F53\u7CFB';
+        isTrue = Math.random() > 0.5;
+        question = isTrue
+          ? e.name_zh + '\u5C5E\u4E8E' + correctSys + '\u3002'
+          : e.name_zh + '\u5C5E\u4E8E' + wrongSys + '\u3002';
+      } else {
+        const correctReg = regions[e.region];
+        const otherRegNames = ['\u6B27\u6D32','\u7F8E\u6D32','\u82CF\u8054/\u4E1C\u6B27','\u4E2D\u4E1C','\u4E9A\u592A'];
+        const wrongOpts = otherRegNames.filter(r => r !== correctReg);
+        const wrongReg = wrongOpts[Math.floor(Math.random() * wrongOpts.length)] || '\u6B27\u6D32';
+        isTrue = Math.random() > 0.5;
+        question = isTrue
+          ? e.name_zh + '\u7684\u4E8B\u4EF6\u4E3B\u8981\u6D89\u53CA' + correctReg + '\u5730\u533A\u3002'
+          : e.name_zh + '\u7684\u4E8B\u4EF6\u4E3B\u8981\u6D89\u53CA' + wrongReg + '\u5730\u533A\u3002';
+      }
       qs.push({
         type: 'truefalse',
-        question: isTrue
-          ? `${e.name_zh}（${e.name_en}）发生在 ${e.date.slice(0,4)} 年。`
-          : `${e.name_zh}（${e.name_en}）发生在 ${wrongDate} 年。`,
+        question: question,
         correct: isTrue,
         eventId: e.id,
-        explanation: `${e.name_zh} 实际发生在 ${e.date.slice(0,4)} 年。${e.summary}`
+        explanation: e.name_zh + ' \u2014 ' + e.date.slice(0,4) + '\u5E74\u3002' + e.summary
       });
     });
     return qs;
